@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>オプション - モデルプロンプトトラッカー</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    input[type="text"] { width: 200px; }
+    ul { list-style-type: none; padding: 0; }
+    li { margin: 5px 0; }
+    button.remove { margin-left: 10px; }
+  </style>
+</head>
+<body>
+  <h2>モデル管理</h2>
+  <input type="text" id="new-model" placeholder="新しいモデル名">
+  <button id="add-model">追加</button>
+  
+  <h3>登録済みモデル</h3>
+  <ul id="model-list"></ul>
+  
+  <script src="options.js"></script>
+</body>
+</html>
