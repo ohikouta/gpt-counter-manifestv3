@@ -1,27 +1,45 @@
 // popup.js
 
 document.addEventListener('DOMContentLoaded', () => {
-    const sendPromptButton = document.getElementById('sendPrompt');
-    const countDisplay = document.getElementById('count');
-  
-    // ボタンがクリックされたときにカウントを増やす
-    sendPromptButton.addEventListener('click', () => {
-      // 実際のChatGPTへのプロンプト送信ロジックをここに追加できます。
-      // ここでは単純にカウントを増やすアクションをシミュレートします。
-  
-      chrome.runtime.sendMessage({ type: 'incrementPromptCount' }, (response) => {
-        if (response && response.success) {
-          countDisplay.textContent = `現在のカウント: ${response.count}`;
-        } else {
-          console.error('カウントの更新に失敗しました。');
-        }
-      });
-    });
-  
-    // 初期カウントの表示
+  const resetCountButton = document.getElementById('resetCount');
+  const countList = document.getElementById('countList');
+
+  // カウントリストを更新する関数
+  function updateCounts() {
     chrome.storage.local.get(['promptCount'], (result) => {
-      const count = result.promptCount || 0;
-      countDisplay.textContent = `現在のカウント: ${count}`;
+      const counts = result.promptCount || {};
+      countList.innerHTML = ''; // 既存のリストをクリア
+
+      for (const [model, count] of Object.entries(counts)) {
+        const div = document.createElement('div');
+        div.className = 'model-count';
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'model-name';
+        nameSpan.textContent = model;
+
+        const countSpan = document.createElement('span');
+        countSpan.textContent = count;
+
+        div.appendChild(nameSpan);
+        div.appendChild(countSpan);
+        countList.appendChild(div);
+      }
+
+      if (Object.keys(counts).length === 0) {
+        countList.innerHTML = '<p>カウントがありません。</p>';
+      }
+    });
+  }
+
+  // カウントリセットボタンのクリックイベント
+  resetCountButton.addEventListener('click', () => {
+    chrome.storage.local.set({ promptCount: {} }, () => {
+      updateCounts();
+      console.log('全てのカウントをリセットしました。');
     });
   });
-  
+
+  // 初期カウントの表示
+  updateCounts();
+});

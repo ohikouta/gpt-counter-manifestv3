@@ -10,18 +10,27 @@
       min-width: 200px;
       padding: 10px;
     }
-    #sendPrompt {
+    #resetCount {
       padding: 5px 10px;
       margin-bottom: 10px;
+      cursor: pointer;
     }
-    #count {
-      font-size: 16px;
+    .model-count {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+    .model-name {
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
-  <button id="sendPrompt">プロンプトを送信</button>
-  <p id="count">現在のカウント: 0</p>
+  <button id="resetCount">カウントをリセット</button>
+  <div id="counts">
+    <p>現在のカウント:</p>
+    <div id="countList"></div>
+  </div>
   <script src="popup.js"></script>
 </body>
 </html>
