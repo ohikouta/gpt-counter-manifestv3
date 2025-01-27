@@ -32,7 +32,7 @@ function getCurrentModel() {
       
       if (modelMatch) {
         const modelName = modelMatch[1].trim(); // 'ChatGPT'
-        const modelVersion = modelMatch[2].trim(); // '4o' や '4ga'
+        const modelVersion = modelMatch[2].trim(); // '4o' 
         const fullModelName = `${modelName} ${modelVersion}`;
         console.log('getCurrentModel: fullModelName:', fullModelName);
         return fullModelName;
@@ -56,23 +56,32 @@ const chatContainer = document.querySelector('main'); // <main>タグを使用
 if (chatContainer) {
   console.log('MutationObserverを初期化します。');
 
-  // MutationObserverの設定
   const observer = new MutationObserver((mutationsList) => {
+    console.log('MutationObserverが呼び出されました。');
     for (let mutation of mutationsList) {
-      if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-        mutation.addedNodes.forEach(node => {
-          if (node.nodeType === Node.ELEMENT_NODE) {
-            // ユーザーメッセージ要素の特定条件
-            if (
-              node.matches('article[data-testid^="conversation-turn-"][data-scroll-anchor="false"]')
-            ) {
-              console.log('ユーザーメッセージが検出されました。');
-              const currentModel = getCurrentModel();
-              incrementPromptCount(currentModel);
-            }
-          }
-        });
-      }
+        console.log('mutation.type:', mutation.type);
+        console.log('mutation.addedNodes.length:', mutation.addedNodes.length);
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+            mutation.addedNodes.forEach((node, index) => {
+                console.log(`追加されたノード[${index}]:`, node);
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                    console.log('ノードはELEMENT_NODEです。');
+                    // 2つのセレクタを組み合わせる
+                    if (
+                        node.matches('article[data-testid^="conversation-turn-"][data-scroll-anchor="false"]') ||
+                        node.matches('div[data-message-author-role="user"]')
+                    ) {
+                        console.log('ユーザーメッセージが検出されました。');
+                        const currentModel = getCurrentModel();
+                        incrementPromptCount(currentModel);
+                    } else {
+                        console.log('セレクタにマッチしませんでした。');
+                    }
+                } else {
+                    console.log('ノードはELEMENT_NODEではありません。');
+                }
+            });
+        }
     }
   });
 
