@@ -5,6 +5,7 @@
     "description": "ChatGPTにプロンプトが送信された回数をカウントします。",
     "permissions": [
       "storage",
+      "activeTab",
       "scripting"
     ],
     "background": {
