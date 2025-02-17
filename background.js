@@ -2,13 +2,13 @@
 
 // 初期化時にカウントと登録済みモデルを設定
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.local.get(['promptCount', 'registeredModels', 'modelLimits'], (result) => {
+  chrome.storage.local.get(['promptCount', 'registeredModels', 'modelLimits', 'modelResetIntervals'], (result) => {
     const defaultModels = ['4o', 'o1', 'o3-mini', 'o3-mini-high'];
     const defaultLimits = {
       '4o': null,        // 無制限
-      'o1': 50,           // 1週あたり
-      'o3-mini': 150,     // 1日あたり
-      'o3-mini-high': 50,     // 1週あたり
+      'o1': 50,          // 1週あたり
+      'o3-mini': 150,    // 1日あたり
+      'o3-mini-high': 50 // 1週あたり
     };
 
     const defaultResetIntervals = {
@@ -16,7 +16,7 @@ chrome.runtime.onInstalled.addListener(() => {
       'o1': 'week',
       'o3-mini': 'day',
       'o3-mini-high': 'week',
-    }
+    };
 
     // promptCount の初期化
     if (result.promptCount === undefined) {
@@ -45,8 +45,16 @@ chrome.runtime.onInstalled.addListener(() => {
         console.log('モデル別のカウント上限を設定しました。');
       });
     }
+    
+    // ★ modelResetIntervals の初期化を追加 ★
+    if (result.modelResetIntervals === undefined) {
+      chrome.storage.local.set({ modelResetIntervals: defaultResetIntervals }, () => {
+        console.log('モデルのリセット間隔を初期設定しました。');
+      });
+    }
   });
 });
+
 
 // メッセージをリッスン
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -91,8 +99,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const resetInterval = resetIntervalsResult[model];
 
         if (modelLimit === undefined || resetInterval === undefined) {
-          throw new Error(`モデル "${model}" の設定が正しくされていません。`);
+          console.error(`エラー: モデル "${model}" の設定が正しくされていません。`);
+          console.error("デバッグ情報:");
+          console.error(`  model: ${model}`);
+          console.error(`  modelLimit:`, modelLimit);
+          console.error(`  resetInterval:`, resetInterval);
+          
+          throw new Error(`モデル "${model}" の設定が正しくされていません。 modelLimit: ${modelLimit}, resetInterval: ${resetInterval}`);
         }
+      
 
         const currentTime = new Date();
         const modelData = countResult[model] || { count: 0, lastReset: null };

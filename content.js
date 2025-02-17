@@ -78,21 +78,22 @@ if (chatContainer) {
           mutation.addedNodes.forEach((node, index) => {
             console.log(`追加されたノード[${index}]:`, node);
             if (node.nodeType === Node.ELEMENT_NODE) {
-              console.log('ノードはELEMENT_NODEです。');
               // 2つのセレクタを組み合わせる
-              if (
-                node.matches('article[data-testid^="conversation-turn-"][data-scroll-anchor="false"]') ||
-                node.matches('div[data-message-author-role="user"]')
-              ) {
-                console.log('ユーザーメッセージが検出されました。');
-                const currentModel = getCurrentModel();
-                if (currentModel !== 'Unknown Model') {
-                  incrementPromptCount(currentModel);
+              if (node.matches('article[data-testid^="conversation-turn-"]')) {
+                // 追加された article の子孫をチェックして
+                const userDiv = node.querySelector('div[data-message-author-role="user"]');
+                if (userDiv) {
+                  console.log('ユーザーメッセージが検出されました。');
+                  const currentModel = getCurrentModel();
+                  if (currentModel !== 'Unknown Model') {
+                    incrementPromptCount(currentModel);
+                  } else {
+                    console.warn('不明なモデルのため、カウントを増やしません。');
+                  }
                 } else {
-                  console.warn('不明なモデルのため、カウントを増やしません。');
+                  // ここはAIの応答か、その他の要素
+                  console.log('AI応答または別要素のため、カウントしません。');
                 }
-              } else {
-                console.log('セレクタにマッチしませんでした。');
               }
             } else {
               console.log('ノードはELEMENT_NODEではありません。');
