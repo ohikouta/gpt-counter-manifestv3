@@ -3,12 +3,20 @@
 // 初期化時にカウントと登録済みモデルを設定
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.get(['promptCount', 'registeredModels', 'modelLimits'], (result) => {
-    const defaultModels = ['4o', 'o1-mini', 'o1'];
+    const defaultModels = ['4o', 'o1', 'o3-mini', 'o3-mini-high'];
     const defaultLimits = {
       '4o': null,        // 無制限
-      'o1-mini': 50,     // 1日あたり
-      'o1': 50           // 1週間あたり
+      'o1': 50,           // 1週あたり
+      'o3-mini': 150,     // 1日あたり
+      'o3-mini-high': 50,     // 1週あたり
     };
+
+    const defaultResetIntervals = {
+      '4o': null,
+      'o1': 'week',
+      'o3-mini': 'day',
+      'o3-mini-high': 'week',
+    }
 
     // promptCount の初期化
     if (result.promptCount === undefined) {
@@ -46,11 +54,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const { model } = message;
     console.log(`Received 'incrementPromptCount' for model: ${model}`);
 
-    // 非同期関数を使用して処理
     (async () => {
       try {
-        // データの取得
-        const [countResult, limitsResult] = await Promise.all([
+        // プロンプトカウント、上限、リセット間隔の取得
+        const [countResult, limitsResult, resetIntervalsResult] = await Promise.all([
           new Promise((resolve, reject) => {
             chrome.storage.local.get(['promptCount'], (res) => {
               if (chrome.runtime.lastError) {
@@ -68,51 +75,40 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 resolve(res.modelLimits || {});
               }
             });
+          }),
+          new Promise((resolve, reject) => {
+            chrome.storage.local.get(['modelResetIntervals'], (res) => {
+              if (chrome.runtime.lastError) {
+                reject(chrome.runtime.lastError);
+              } else {
+                resolve(res.modelResetIntervals || {});
+              }
+            });
           })
         ]);
 
-        const modelLimits = limitsResult[model];
-        if (modelLimits === undefined) {
-          throw new Error(`モデル "${model}" の制約が設定されていません。`);
+        const modelLimit = limitsResult[model];
+        const resetInterval = resetIntervalsResult[model];
+
+        if (modelLimit === undefined || resetInterval === undefined) {
+          throw new Error(`モデル "${model}" の設定が正しくされていません。`);
         }
 
         const currentTime = new Date();
         const modelData = countResult[model] || { count: 0, lastReset: null };
-        let shouldReset = false;
 
-        // 制約があるモデルの場合、リセットが必要か確認
-        if (modelLimits !== null) {
-          if (modelData.lastReset) {
-            if (model === 'o1-mini') {
-              // 日単位のリセット
-              const lastResetDate = new Date(modelData.lastReset);
-              if (!isSameDay(currentTime, lastResetDate)) {
-                shouldReset = true;
-              }
-            } else if (model === 'o1') {
-              // 週単位のリセット
-              const lastResetDate = new Date(modelData.lastReset);
-              if (!isSameWeek(currentTime, lastResetDate)) {
-                shouldReset = true;
-              }
-            }
-          } else {
-            // 初回リセット
-            shouldReset = true;
-          }
+        // リセットが必要かをチェック（resetInterval が null の場合はリセット不要）
+        if (resetInterval !== null && needsReset(modelData.lastReset, resetInterval)) {
+          modelData.count = 0;
+          modelData.lastReset = currentTime.toISOString();
+          console.log(`モデル "${model}" のカウントをリセットしました。`);
+        }
 
-          if (shouldReset) {
-            modelData.count = 0;
-            modelData.lastReset = currentTime.toISOString();
-            console.log(`モデル "${model}" のカウントをリセットしました。`);
-          }
-
-          // 上限に達しているか確認
-          if (modelData.count >= modelLimits) {
-            console.warn(`モデル "${model}" のプロンプト上限に達しました。`);
-            sendResponse({ success: false, message: 'プロンプト上限に達しました。' });
-            return;
-          }
+        // 上限に達しているかをチェック（null の場合は無制限）
+        if (modelLimit !== null && modelData.count >= modelLimit) {
+          console.warn(`モデル "${model}" のプロンプト上限に達しました。`);
+          sendResponse({ success: false, message: 'プロンプト上限に達しました。' });
+          return;
         }
 
         // カウントを増加
@@ -130,7 +126,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           });
         });
 
-        console.log(`モデル "${model}" のプロンプトが送信されました: ${modelData.count} (type: ${typeof modelData.count})`);
+        console.log(`モデル "${model}" のプロンプトが送信されました: ${modelData.count}`);
         sendResponse({ success: true, count: modelData.count, model: model });
       } catch (error) {
         console.error(`Error incrementing prompt count for model "${model}":`, error);
@@ -142,6 +138,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 });
+
 
 // 日付が同じ日かをチェック
 function isSameDay(date1, date2) {
@@ -164,4 +161,18 @@ function isSameWeek(date1, date2) {
   const week2 = startOfWeek(date2);
 
   return week1.getTime() === week2.getTime();
+}
+
+// 汎用的なリセット判定関数
+function needsReset(lastResetISO, intervalType) {
+  if (!lastResetISO || !intervalType) return true;
+  const lastResetDate = new Date(lastResetISO);
+  const currentTime = new Date();
+
+  if (intervalType === 'day') {
+    return !isSameDay(currentTime, lastResetDate);
+  } else if (intervalType === 'week') {
+    return !isSameWeek(currentTime, lastResetDate);
+  }
+  return false;
 }

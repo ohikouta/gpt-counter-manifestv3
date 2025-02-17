@@ -27,14 +27,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const formattedDate = formatDate(new Date(data.lastReset));
 
         // モデルに応じたリセット情報を表示
-        if (model === 'o1-mini') {
-          resetSpan.textContent = ` (リセット日: ${formattedDate})`;
-        } else if (model === 'o1') {
+        if (model === 'o1' || model === 'o3-mini-high') {
+          // 週単位のリセットの場合、週番号を表示
           const weekNumber = getWeekNumber(new Date(data.lastReset));
           resetSpan.textContent = ` (リセット週: 第${weekNumber}週)`;
+        } else if (model === 'o3-mini') {
+          // 日単位のリセットの場合、日付を表示
+          resetSpan.textContent = ` (リセット日: ${formattedDate})`;
         } else {
-          resetSpan.textContent = ''; // 他のモデルには不要な場合
+          // 4oなど無制限のモデルの場合はリセット情報を表示しない
+          resetSpan.textContent = '';
         }
+
 
         div.appendChild(nameSpan);
         div.appendChild(countSpan);
