@@ -65,6 +65,23 @@ function getCurrentModel() {
 // 監視対象の親要素を特定
 const chatContainer = document.querySelector('main'); // <main>タグを使用
 
+// ユーザーメッセージがあるかチェックする関数
+function checkUserMessage(articleNode) {
+  // articleの子孫にある data-message-author-role="user"を探す
+  const userDiv = articleNode.querySelector('div[data-message-author-role="user"]');
+  if (userDiv) {
+    console.log('ユーザーメッセージが検出されました。');
+    const currentModel = getCurrentModel();
+    if (currentModel !== 'Unknown Model') {
+      incrementPromptCount(currentModel);
+    } else {
+      console.warn('不明なモデルのため、カウントを増やしません。');
+    }
+  } else {
+    console.log('AI応答または別要素のため、カウントしません。');
+  }
+}
+
 if (chatContainer) {
   console.log('MutationObserverを初期化します。');
 
@@ -74,26 +91,23 @@ if (chatContainer) {
       for (let mutation of mutationsList) {
         console.log('mutation.type:', mutation.type);
         console.log('mutation.addedNodes.length:', mutation.addedNodes.length);
+
         if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
           mutation.addedNodes.forEach((node, index) => {
             console.log(`追加されたノード[${index}]:`, node);
+
             if (node.nodeType === Node.ELEMENT_NODE) {
-              // 2つのセレクタを組み合わせる
+              // 1. 追加されたノード自身がarticleかどうかをチェック
               if (node.matches('article[data-testid^="conversation-turn-"]')) {
-                // 追加された article の子孫をチェックして
-                const userDiv = node.querySelector('div[data-message-author-role="user"]');
-                if (userDiv) {
-                  console.log('ユーザーメッセージが検出されました。');
-                  const currentModel = getCurrentModel();
-                  if (currentModel !== 'Unknown Model') {
-                    incrementPromptCount(currentModel);
-                  } else {
-                    console.warn('不明なモデルのため、カウントを増やしません。');
-                  }
-                } else {
-                  // ここはAIの応答か、その他の要素
-                  console.log('AI応答または別要素のため、カウントしません。');
-                }
+                checkUserMessage(node);
+              }
+
+              // 2. 追加されたノードの子孫にarticleがあるかをチェック
+              const articleChildren = node.querySelectorAll('article[data-testid^="conversation-turn-"]');
+              if (articleChildren.length > 0) {
+                articleChildren.forEach((articleNode) => {
+                  checkUserMessage(articleNode);
+                });
               }
             } else {
               console.log('ノードはELEMENT_NODEではありません。');

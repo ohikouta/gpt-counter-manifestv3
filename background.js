@@ -1,5 +1,3 @@
-// background.js
-
 // 初期化時にカウントと登録済みモデルを設定
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.get(['promptCount', 'registeredModels', 'modelLimits', 'modelResetIntervals'], (result) => {
